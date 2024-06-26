@@ -26,7 +26,11 @@ class GetTextConan(ConanFile):
     topics = ("gettext", "intl", "libintl", "i18n")
     url = "https://github.com/conan-io/conan-center-index"
     homepage = "https://www.gnu.org/software/gettext"
-    license = "GPL-3.0-or-later"
+    # Some parts of the project are GPL-3.0-or-later and some are LGPL-2.1-or-later.
+    # At this time, only libintl is packaged, which is licensed under the LGPL-2.1-or-later.
+    # If you modify this package to include other portions of the library, please configure the license accordingly.
+    # The licensing of the project is documented here: https://www.gnu.org/software/gettext/manual/gettext.html#Licenses
+    license = "LGPL-2.1-or-later"
 
     package_type = "library"
     settings = "os", "arch", "compiler", "build_type"
@@ -120,6 +124,15 @@ class GetTextConan(ConanFile):
             if (str(self.settings.compiler) == "Visual Studio" and Version(self.settings.compiler.version) >= "12") or \
                (str(self.settings.compiler) == "msvc" and Version(self.settings.compiler.version) >= "180"):
                 tc.extra_cflags += ["-FS"]
+
+            if self.settings.build_type == "Debug":
+                # Skip checking for the 'n' printf format directly
+                # in msvc, as it is known to not be available due to security concerns.
+                # Skipping it avoids a GUI prompt during ./configure for a debug build
+                # See https://github.com/conan-io/conan-center-index/issues/23698
+                tc.configure_args.extend([
+                    'gl_cv_func_printf_directive_n=no'
+                ])
         tc.make_args += ["-C", "intl"]
         env = tc.environment()
         if is_msvc(self) or self._is_clang_cl:
